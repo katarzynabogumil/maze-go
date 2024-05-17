@@ -5,16 +5,21 @@ import (
 	"math"
 	"math/rand/v2"
 	"slices"
+	"strings"
 	"unicode/utf8"
 )
 
 func main() {
-	maze := setupMaze(10, 5, 15)
-	print(&maze, nil)
-
+	maze := setupMaze(20, 10, 50)
 	start := generatePoint(&maze)
 	end := generatePoint(&maze)
-	path := shortestPath(&maze, start, end)
+
+	path, err := shortestPath(&maze, start, end)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	print(&maze, &path)
 }
 
@@ -27,10 +32,43 @@ type Point struct {
 	prev       *Point
 }
 
-func shortestPath(maze *[][]*Point, start *Point, end *Point) []*Point {
-	// TODO
-	// var q []*Point
-	return nil
+func shortestPath(maze *[][]*Point, start *Point, end *Point) ([]*Point, error) {
+	q := []*Point{start}
+	start.distance = 0
+	visited := map[string]bool{}
+	found := false
+
+	for len(q) > 0 {
+		point := q[0]
+		q = q[1:]
+
+		if point == end {
+			found = true
+			break
+		}
+
+		for _, neighbour := range point.neighbours {
+			if !visited[strPoint(neighbour)] {
+				visited[strPoint(neighbour)] = true
+				q = append(q, neighbour)
+				neighbour.distance = point.distance + 1
+				neighbour.prev = point
+			}
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("No path found")
+	}
+
+	path := []*Point{}
+	point := end
+	for point != start {
+		path = append([]*Point{point}, path...)
+		point = point.prev
+	}
+
+	return path, nil
 }
 
 func setupMaze(sizeX int, sizeY int, walls int) [][]*Point {
@@ -136,4 +174,8 @@ func generatePoint(maze *[][]*Point) *Point {
 		}
 	}
 	return point
+}
+
+func strPoint(p *Point) string {
+	return strings.Join([]string{fmt.Sprint(p.x), fmt.Sprint(p.y)}, ",")
 }
